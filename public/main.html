@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Aplikacja do zarządzania zadaniami</title>
+</head>
+<body>
+    <form id="taskForm">
+        <label for="zadanie">Wpisz zadanie:</label><br>
+        <input type="text" name="zadanie" id="zadanie"><br>
+        <button type="submit">Dodaj zadanie</button>
+    </form>
+    <div id="listaZadan"></div>
+
+    <script>
+        document.getElementById('taskForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const zadanie = document.getElementById('zadanie').value;
+            if (zadanie === '') {
+                alert('Proszę wpisać zadanie.');
+                return;
+            }
+
+            const response = await fetch('/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: Date.now().toString(), text: zadanie, completed: false })
+            });
+
+            const newTask = await response.json();
+            addTaskToDOM(newTask);
+            document.getElementById('zadanie').value = '';
+        });
+
+        async function fetchTasks() {
+            const response = await fetch('/tasks');
+            const tasks = await response.json();
+            tasks.forEach(task => addTaskToDOM(task));
+        }
+
+        function addTaskToDOM(task) {
+            const listaZadan = document.getElementById('listaZadan');
+            const noweZadanie = document.createElement('div');
+            noweZadanie.textContent = task.text;
+
+            if (task.completed) {
+                noweZadanie.style.textDecoration = 'line-through';
+            }
+
+            const przyciskUkonczenia = document.createElement('button');
+            przyciskUkonczenia.textContent = 'Ukończ';
+            przyciskUkonczenia.onclick = async function() {
+                await fetch(`/tasks/${task.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ...task, completed: true })
+                });
+                task.completed = true;
+                noweZadanie.style.textDecoration = 'line-through';
+            };
+
+            const przyciskUsuwania = document.createElement('button');
+            przyciskUsuwania.textContent = 'Usuń';
+            przyciskUsuwania.onclick = async function() {
+                await fetch(`/tasks/${task.id}`, {
+                    method: 'DELETE'
+                });
+                listaZadan.removeChild(noweZadanie);
+            };
+
+            noweZadanie.appendChild(przyciskUkonczenia);
+            noweZadanie.appendChild(przyciskUsuwania);
+            listaZadan.appendChild(noweZadanie);
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>
